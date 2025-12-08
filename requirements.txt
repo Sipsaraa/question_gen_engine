@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+python-multipart
+requests
+google-generativeai
+sqlmodel
+python-dotenv
+pytest
+pytest-asyncio
+httpx
