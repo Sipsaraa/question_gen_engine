@@ -3,8 +3,8 @@ import json
 import google.generativeai as genai
 from typing import List
 from dotenv import load_dotenv
-from ..models.question import SyllabusContent, GeneratedQuestion
-from ..models.generation_schema import QuestionBank
+from src.shared.models.question import SyllabusContent, GeneratedQuestion
+from src.shared.models.generation_schema import QuestionBank
 
 # Load env vars
 load_dotenv()

@@ -2,15 +2,11 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Run Question Gen Engine",
+            "name": "Start All Microservices",
             "type": "debugpy",
             "request": "launch",
-            "module": "uvicorn",
-            "args": [
-                "src.app.main:app",
-                "--reload"
-            ],
-            "jinja": true,
+            "program": "${workspaceFolder}/scripts/start_services.py",
+            "console": "integratedTerminal",
             "justMyCode": true
         },
         {
