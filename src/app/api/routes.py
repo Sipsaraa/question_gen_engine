@@ -33,5 +33,8 @@ def generate_questions_endpoint(content: SyllabusContent, session: Session = Dep
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/questions", response_model=List[GeneratedQuestion])
-def list_questions(session: Session = Depends(get_session)):
-    return session.exec(select(GeneratedQuestion)).all()
+def list_questions(medium: str = None, session: Session = Depends(get_session)):
+    query = select(GeneratedQuestion)
+    if medium:
+        query = query.where(GeneratedQuestion.medium == medium)
+    return session.exec(query).all()

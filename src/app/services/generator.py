@@ -32,7 +32,7 @@ class GeneratorService:
         
         Subject: {content.subject}
         Grade: {content.grade}
-        Medium: {content.medium}
+        Medium: {content.medium} (GENERATE CONTENT IN THIS LANGUAGE)
         
         Content:
         "{content.content}"
@@ -100,6 +100,8 @@ class GeneratorService:
                     subject=content.subject,
                     grade=content.grade,
                     medium=content.medium,
+                    chapter_id=content.chapter_id,
+                    chapter_name=content.chapter_name,
                     question_type=item.type.value,
                     question_text=item.question_text,
                     options=options_str,

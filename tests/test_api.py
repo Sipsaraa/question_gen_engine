@@ -13,6 +13,7 @@ def test_generate_questions(mock_generate, client: TestClient):
     mock_questions = [
         GeneratedQuestion(
             subject="Math", grade="10", medium="EN",
+            chapter_id="1", chapter_name="Algebra",
             question_type="mcq",
             question_text="What is 2+2?",
             options='["3", "4", "5"]',
@@ -26,6 +27,8 @@ def test_generate_questions(mock_generate, client: TestClient):
         "subject": "Math",
         "grade": "10",
         "medium": "EN",
+        "chapter_id": "1",
+        "chapter_name": "Algebra",
         "content": "Math syllabus content..."
     }
     
