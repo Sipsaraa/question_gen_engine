@@ -4,6 +4,7 @@ import google.generativeai as genai
 from typing import List
 from dotenv import load_dotenv
 from ..models.question import SyllabusContent, GeneratedQuestion
+from ..models.generation_schema import QuestionBank
 
 # Load env vars
 load_dotenv()
@@ -22,11 +23,12 @@ class GeneratorService:
 
     def generate_questions(self, content: SyllabusContent) -> List[GeneratedQuestion]:
         """
-        Uses Gemini to extract questions (Fill-blanks & MCQ) with Explanations.
+        Uses Gemini to extract questions (Fill-blanks & MCQ) with Explanations
+        using structured output.
         """
         prompt = f"""
         You are an expert educational content creator.
-        Analyze the following syllabus content and generate 'GeneratedQuestion' items.
+        Analyze the following syllabus content and generate a 'QuestionBank' of items.
         
         Subject: {content.subject}
         Grade: {content.grade}
@@ -35,52 +37,74 @@ class GeneratorService:
         Content:
         "{content.content}"
         
-        Generate a mix of:
-        1. **Fill-in-the-blank**: 
-           - Use `{{0}}`, `{{1}}` for blanks.
-           - Provide `options` (distractors included) for the blanks.
-           - `answer` should be the list of correct words in order.
-        2. **Multiple Choice (MCQ)**:
-           - Standard question.
-           - `options` is a list of choices.
-           - `answer` is the correct option text.
-
-        For ALL items, provide an `explanation` field:
-        - Format as **MDX (Markdown)**.
-        - Explain *why* the answer is correct.
-        - Use LaTeX for equations: enclosed in single `$` (e.g. $E=mc^2$).
-        
-        Output purely as a JSON ARRAY.
+        Requirements:
+        1. create a mix of 'mcq' and 'fill_in_the_blank' questions.
+        2. For 'fill_in_the_blank':
+           - Use `{{0}}`, `{{1}}` for blanks in the `question_text`.
+           - Provide `options` (including distractors) as a list of strings.
+           - `answer` should be the list of correct words in order, matching the placeholders.
+        3. For 'mcq':
+           - `options` is the list of choices.
+           - `answer` is a list containing the single correct option text.
+        4. CRITICAL: For ALL items, provide a detailed `explanation`:
+           - It MUST contain a theoretical explanation of WHY the answer is correct.
+           - Do NOT just cite the text. Explain the underlying concept or principle.
+           - Use MDX format.
+           - Use Single `$` for inline LaTeX equations if needed (e.g. $E=mc^2$).
         """
         
         try:
-            print(f"DEBUG: Generating content ({content.subject})...")
-            response = self.model.generate_content(prompt)
+            print(f"DEBUG: Generating content ({content.subject}) with structured output...")
             
-            # Cleanup Potential Markdown formatting
-            text = response.text.replace("```json", "").replace("```", "").strip()
+            response = self.model.generate_content(
+                prompt,
+                generation_config={
+                    "response_mime_type": "application/json",
+                    "response_schema": QuestionBank,
+                }
+            )
             
-            data = json.loads(text)
+            # Parse the structured response
+            try:
+                question_bank = QuestionBank.model_validate_json(response.text)
+            except Exception as parse_error:
+                print(f"Error parsing JSON from Gemini: {parse_error}")
+                print(f"Raw response: {response.text}")
+                return []
             
             results = []
-            for item in data:
-                options_str = json.dumps(item.get("options", []))
+            for item in question_bank.questions:
+                # Convert list answer to the format expected by GeneratedQuestion (stringified json or string)
+                # The prompt asks for answer as a list for schema consistency, but GeneratedQuestion might expect something else.
+                # Looking at the original code:
+                # option_str = json.dumps(item.get("options", []))
+                # ans = item.get("answer") -> if list/dict dump, else str.
                 
-                ans = item.get("answer")
-                if isinstance(ans, (list, dict)):
-                    answer_str = json.dumps(ans)
-                else:
-                    answer_str = str(ans)
+                # In our new schema:
+                # options is List[str] -> dumps
+                # answer is List[str] -> dumps (for consistency)
+                
+                options_str = json.dumps(item.options)
+                
+                # For MCQ, the original code expected a single string if it wasn't a list/dict.
+                # However, to be cleaner, we will store everything as a JSON string if possible, 
+                # or match the previous behavior.
+                # Previous behavior: 
+                # if isinstance(ans, (list, dict)): answer_str = json.dumps(ans) else: answer_str = str(ans)
+                
+                # Our new schema ALWAYS returns a list for answer.
+                # So we can just dump it.
+                answer_str = json.dumps(item.answer)
 
                 results.append(GeneratedQuestion(
                     subject=content.subject,
                     grade=content.grade,
                     medium=content.medium,
-                    question_type=item.get('question_type', 'unknown'),
-                    question_text=item.get('question_text', ''),
+                    question_type=item.type.value,
+                    question_text=item.question_text,
                     options=options_str,
                     answer=answer_str,
-                    explanation=item.get('explanation', "")
+                    explanation=item.explanation
                 ))
             
             return results
