@@ -9,7 +9,7 @@ from src.shared.models.question import SyllabusContent, GeneratedQuestion
 from src.shared.core.database import get_session, create_db_and_tables
 from src.services.generator.service import GeneratorService
 
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8000")
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://127.0.0.1:8000")
 SERVICE_PORT = os.getenv("SERVICE_PORT", "8004")
 SERVICE_URL = f"http://127.0.0.1:{SERVICE_PORT}"
 

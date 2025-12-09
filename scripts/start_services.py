@@ -33,14 +33,22 @@ def main():
         time.sleep(5) 
         
         # 2. Start Services (They will auto-register)
-        procs.append(start_service("src.services.qbank.main:app", 8002, "Science QBank", {"SERVICE_PORT": "8002"}))
-        procs.append(start_service("src.services.qbank.main:app", 8003, "General QBank", {"SERVICE_PORT": "8003"}))
+        # Dynamic Subject Services
+        SUBJECTS = ["general", "science", "maths", "history"]
+        BASE_UBANK_PORT = 8010
         
-        # Scale Generation Service (3 instances)
+        for i, subject in enumerate(SUBJECTS):
+            port = BASE_UBANK_PORT + i
+            service_name = f"{subject}_qbank"
+            procs.append(start_service(
+                "src.services.qbank.main:app", 
+                port, 
+                f"{subject.title()} QBank", 
+                {"SERVICE_PORT": str(port), "SERVICE_NAME": service_name}
+            ))
+        
         procs.append(start_service("src.services.generator.main:app", 8004, "Generation Service - 1", {"SERVICE_PORT": "8004"}))
-        procs.append(start_service("src.services.generator.main:app", 8005, "Generation Service - 2", {"SERVICE_PORT": "8005"}))
-        procs.append(start_service("src.services.generator.main:app", 8006, "Generation Service - 3", {"SERVICE_PORT": "8006"}))
-        
+
         print("\nAll Services Started!")
         print("Gateway: http://127.0.0.1:8000")
         print("Press Ctrl+C to stop all services.\n")

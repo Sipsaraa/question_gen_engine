@@ -10,8 +10,8 @@ from pydantic import BaseModel
 
 # Service Registry
 SERVICE_REGISTRY = {
-    "science_qbank": ["http://localhost:8002"], # Default fallbacks
-    "general_qbank": ["http://localhost:8003"],
+    "science_qbank": [], 
+    "general_qbank": [],
     "generator": [] 
 }
 
@@ -55,8 +55,14 @@ async def list_questions(
 ):
     # Dynamic Lookup
     target_service = "general_qbank"
-    if subject and subject.lower() == "science":
-        target_service = "science_qbank"
+    
+    if subject:
+        # Try to find a specific service for this subject
+        potential_service = f"{subject.lower()}_qbank"
+        if potential_service in SERVICE_REGISTRY and SERVICE_REGISTRY[potential_service]:
+            target_service = potential_service
+        else:
+            print(f"Warning: No dedicated service found for '{subject}', falling back to general_qbank.")
     
     target_url = get_service_url(target_service)
     

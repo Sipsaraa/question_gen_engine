@@ -12,8 +12,8 @@ from src.shared.core.database import get_session, create_db_and_tables
 # Determine Service Name based on what we are running
 # In a real setup, this might be passed as an ENV var 'SERVICE_NAME'
 SERVICE_PORT = os.getenv("SERVICE_PORT", "8002")
-SERVICE_NAME = "science_qbank" if SERVICE_PORT == "8002" else "general_qbank" # Simple heuristic for now
-GATEWAY_URL = os.getenv("GATEWAY_URL", "http://localhost:8000")
+SERVICE_NAME = os.getenv("SERVICE_NAME", "general_qbank") # Default to general if not specified
+GATEWAY_URL = os.getenv("GATEWAY_URL", "http://127.0.0.1:8000")
 SERVICE_URL = f"http://127.0.0.1:{SERVICE_PORT}"
 
 @asynccontextmanager
