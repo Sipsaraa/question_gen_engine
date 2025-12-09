@@ -4,12 +4,19 @@ import os
 import signal
 import time
 
-def start_service(command, port, name):
+def start_service(command, port, name, env=None):
     print(f"Starting {name} on port {port}...")
+    
+    # Merge current env with passed env
+    process_env = os.environ.copy()
+    if env:
+        process_env.update(env)
+        
     # Use python -m uvicorn to ensure path is correct and use reloading for dev
     proc = subprocess.Popen(
         [sys.executable, "-m", "uvicorn", command, "--port", str(port), "--host", "127.0.0.1", "--reload"],
         cwd=os.getcwd(),
+        env=process_env,
         # We want to see output in the console
         stdout=None, 
         stderr=None
@@ -19,11 +26,20 @@ def start_service(command, port, name):
 def main():
     procs = []
     try:
-        # Start Services
-        procs.append(start_service("src.services.qbank.main:app", 8002, "Science QBank"))
-        procs.append(start_service("src.services.qbank.main:app", 8003, "General QBank"))
-        procs.append(start_service("src.services.generator.main:app", 8004, "Generation Service"))
-        procs.append(start_service("src.services.gateway.main:app", 8000, "Gateway"))
+        # 1. Start Gateway FIRST causing it to be the registry
+        # We need it up so services can register
+        procs.append(start_service("src.services.gateway.main:app", 8000, "Gateway", {"SERVICE_PORT": "8000"}))
+        print("Waiting 5s for Gateway to initialize...")
+        time.sleep(5) 
+        
+        # 2. Start Services (They will auto-register)
+        procs.append(start_service("src.services.qbank.main:app", 8002, "Science QBank", {"SERVICE_PORT": "8002"}))
+        procs.append(start_service("src.services.qbank.main:app", 8003, "General QBank", {"SERVICE_PORT": "8003"}))
+        
+        # Scale Generation Service (3 instances)
+        procs.append(start_service("src.services.generator.main:app", 8004, "Generation Service - 1", {"SERVICE_PORT": "8004"}))
+        procs.append(start_service("src.services.generator.main:app", 8005, "Generation Service - 2", {"SERVICE_PORT": "8005"}))
+        procs.append(start_service("src.services.generator.main:app", 8006, "Generation Service - 3", {"SERVICE_PORT": "8006"}))
         
         print("\nAll Services Started!")
         print("Gateway: http://127.0.0.1:8000")
