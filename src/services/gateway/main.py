@@ -1,7 +1,8 @@
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, Form
 from typing import List, Optional
 from src.shared.models.question import GeneratedQuestion, SyllabusContent
+from src.shared.utils.pdf_utils import extract_text_from_pdf
 
 app = FastAPI(title="Question Gen Gateway")
 
@@ -101,3 +102,57 @@ async def generate_questions(content: SyllabusContent):
             raise HTTPException(status_code=503, detail=f"Generation service unreachable ({target_url}): {exc}")
         except httpx.HTTPStatusError as exc:
             raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+
+@app.post("/generate/pdf", response_model=List[GeneratedQuestion])
+async def generate_questions_from_pdf(
+    file: UploadFile = File(...),
+    subject: str = Form(...),
+    grade: str = Form(...),
+    medium: str = Form(...),
+    chapter_id: str = Form(...),
+    chapter_name: str = Form(...),
+):
+    print(f"Received PDF upload for {subject} - {chapter_name}")
+    
+    try:
+        file_content = await file.read()
+        text = extract_text_from_pdf(file_content)
+        
+        if not text:
+            raise HTTPException(status_code=400, detail="Could not extract text from PDF")
+            
+        print(f"Extracted {len(text)} chars from PDF")
+        
+        # Create content object
+        content = SyllabusContent(
+            subject=subject,
+            grade=grade,
+            medium=medium,
+            chapter_id=chapter_id,
+            chapter_name=chapter_name,
+            content=text
+        )
+        
+        # Reuse logic: Forward to generator service
+        # (Ideally this should be a shared helper, but duplicate for now for safety)
+        target_url = get_service_url("generator")
+        print(f"Routing PDF generation request to: {target_url}") 
+        
+        async with httpx.AsyncClient() as client:
+            try:
+                # Forward the request body
+                response = await client.post(
+                    f"{target_url}/generate", 
+                    json=content.model_dump(),
+                    timeout=120.0 # Increased timeout for PDFs
+                )
+                response.raise_for_status()
+                return response.json()
+            except httpx.RequestError as exc:
+                raise HTTPException(status_code=503, detail=f"Generation service unreachable ({target_url}): {exc}")
+            except httpx.HTTPStatusError as exc:
+                raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+                
+    except Exception as e:
+        print(f"Error processing PDF: {e}")
+        raise HTTPException(status_code=500, detail=str(e))

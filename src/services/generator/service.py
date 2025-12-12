@@ -39,11 +39,12 @@ class GeneratorService:
         
         Requirements:
         1. create a mix of 'mcq' and 'fill_in_the_blank' questions.
-        2. For 'fill_in_the_blank':
+        2. GENERATE AS MANY QUESTIONS AS POSSIBLE to cover every single concept in the provided content. AIM FOR MAXIMUM COVERAGE.
+        3. For 'fill_in_the_blank':
            - Use `{{0}}`, `{{1}}` for blanks in the `question_text`.
            - Provide `options` (including distractors) as a list of strings.
            - `answer` should be the list of correct words in order, matching the placeholders.
-        3. For 'mcq':
+        4. For 'mcq':
            - `options` is the list of choices.
            - `answer` is a list containing the single correct option text.
         4. CRITICAL: For ALL items, provide a detailed `explanation`:
