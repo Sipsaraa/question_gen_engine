@@ -49,6 +49,8 @@ app = FastAPI(title=f"{SERVICE_NAME.replace('_', ' ').title()}", lifespan=lifesp
 def list_questions(
     medium: Optional[str] = None, 
     subject: Optional[str] = None,
+    start_id: Optional[int] = None,
+    end_id: Optional[int] = None,
     session: Session = Depends(get_session)
 ):
     query = select(GeneratedQuestion)
@@ -56,6 +58,13 @@ def list_questions(
         query = query.where(GeneratedQuestion.medium == medium)
     if subject:
         query = query.where(GeneratedQuestion.subject == subject)
+    
+    # ID Range Filter
+    if start_id is not None:
+        query = query.where(GeneratedQuestion.id >= start_id)
+    if end_id is not None:
+        query = query.where(GeneratedQuestion.id <= end_id)
+        
     return session.exec(query).all()
 
 @app.get("/health")

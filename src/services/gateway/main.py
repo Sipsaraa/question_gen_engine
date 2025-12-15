@@ -1,8 +1,10 @@
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, Form
+from fastapi.responses import StreamingResponse
 from typing import List, Optional
 from src.shared.models.question import GeneratedQuestion, SyllabusContent
 from src.shared.utils.pdf_utils import extract_text_from_pdf
+from src.shared.utils.pdf_generator import generate_question_pdf
 
 app = FastAPI(title="Question Gen Gateway")
 
@@ -48,6 +50,59 @@ def get_service_url(service_name: str) -> str:
 @app.get("/health")
 def health_check():
     return {"status": "ok", "service": "Gateway", "registry": SERVICE_REGISTRY}
+
+@app.get("/questions/export/pdf")
+async def export_questions_pdf(
+    start_id: int,
+    end_id: int,
+    subject: Optional[str] = None
+):
+    # 1. Fetch questions from QBank (or specific subject QBank)
+    target_service = "general_qbank"
+    if subject:
+         # Try to find a specific service
+        potential_service = f"{subject.lower()}_qbank"
+        if potential_service in SERVICE_REGISTRY and SERVICE_REGISTRY[potential_service]:
+            target_service = potential_service
+            
+    target_url = get_service_url(target_service)
+    
+    async with httpx.AsyncClient() as client:
+        try:
+            params = {
+                "start_id": start_id,
+                "end_id": end_id
+            }
+            if subject:
+                params["subject"] = subject
+                
+            print(f"Fetching questions from {target_url} with params {params}")
+            response = await client.get(f"{target_url}/questions", params=params)
+            response.raise_for_status()
+            questions_data = response.json()
+            
+            # Convert back to objects
+            questions = [GeneratedQuestion(**q) for q in questions_data]
+            
+            if not questions:
+                # Return empty PDF or error? Error is better to inform user.
+                raise HTTPException(status_code=404, detail="No questions found in the specified range.")
+            
+            # 2. Generate PDF
+            pdf_buffer = generate_question_pdf(questions)
+            
+            # 3. Stream Response
+            filename = f"questions_{start_id}_to_{end_id}.pdf"
+            return StreamingResponse(
+                pdf_buffer, 
+                media_type="application/pdf",
+                headers={"Content-Disposition": f"attachment; filename={filename}"}
+            )
+            
+        except httpx.RequestError as exc:
+            raise HTTPException(status_code=503, detail=f"Service unreachable ({target_url}): {exc}")
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
 
 @app.get("/questions", response_model=List[GeneratedQuestion])
 async def list_questions(
