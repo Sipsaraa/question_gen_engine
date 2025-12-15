@@ -38,5 +38,7 @@ ENV/
 *.db
 *.sqlite
 
+*.pdf
+
 # Pytest
 .pytest_cache/
