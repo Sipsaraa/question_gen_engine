@@ -49,6 +49,8 @@ app = FastAPI(title=f"{SERVICE_NAME.replace('_', ' ').title()}", lifespan=lifesp
 def list_questions(
     medium: Optional[str] = None, 
     subject: Optional[str] = None,
+    grade: Optional[str] = None,
+    chapter_id: Optional[str] = None,
     start_id: Optional[int] = None,
     end_id: Optional[int] = None,
     session: Session = Depends(get_session)
@@ -58,6 +60,10 @@ def list_questions(
         query = query.where(GeneratedQuestion.medium == medium)
     if subject:
         query = query.where(GeneratedQuestion.subject == subject)
+    if grade:
+        query = query.where(GeneratedQuestion.grade == grade)
+    if chapter_id:
+        query = query.where(GeneratedQuestion.chapter_id == chapter_id)
     
     # ID Range Filter
     if start_id is not None:

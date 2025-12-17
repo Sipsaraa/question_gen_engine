@@ -8,6 +8,7 @@ class SyllabusContent(SQLModel):
     chapter_id: str
     chapter_name: str
     content: str
+    generation_type: str = "general"
 
 class GeneratedQuestion(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

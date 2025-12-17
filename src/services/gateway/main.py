@@ -53,9 +53,12 @@ def health_check():
 
 @app.get("/questions/export/pdf")
 async def export_questions_pdf(
-    start_id: int,
-    end_id: int,
-    subject: Optional[str] = None
+    subject: str,
+    grade: str,
+    medium: str,
+    chapter_id: str,
+    start_id: Optional[int] = None,
+    end_id: Optional[int] = None
 ):
     # 1. Fetch questions from QBank (or specific subject QBank)
     target_service = "general_qbank"
@@ -70,11 +73,18 @@ async def export_questions_pdf(
     async with httpx.AsyncClient() as client:
         try:
             params = {
-                "start_id": start_id,
-                "end_id": end_id
+                "subject": subject,
+                "grade": grade,
+                "medium": medium,
+                "chapter_id": chapter_id
             }
-            if subject:
-                params["subject"] = subject
+            if start_id:
+                params["start_id"] = start_id
+            if end_id:
+                params["end_id"] = end_id
+                
+            print(f"Fetching questions from {target_url} with params {params}")
+            response = await client.get(f"{target_url}/questions", params=params)
                 
             print(f"Fetching questions from {target_url} with params {params}")
             response = await client.get(f"{target_url}/questions", params=params)
@@ -92,7 +102,7 @@ async def export_questions_pdf(
             pdf_buffer = generate_question_pdf(questions)
             
             # 3. Stream Response
-            filename = f"questions_{start_id}_to_{end_id}.pdf"
+            filename = f"questions_{subject}_{chapter_id}.pdf"
             return StreamingResponse(
                 pdf_buffer, 
                 media_type="application/pdf",
@@ -166,9 +176,10 @@ async def generate_questions_from_pdf(
     medium: str = Form(...),
     chapter_id: str = Form(...),
     chapter_name: str = Form(...),
+    generation_type: str = Form("general"),
 ):
-    print(f"Received PDF upload for {subject} - {chapter_name}")
-    
+    print(f"Received PDF upload for {subject} - {chapter_name} ({generation_type})")
+    breakpoint()
     try:
         file_content = await file.read()
         text = extract_text_from_pdf(file_content)
@@ -185,7 +196,8 @@ async def generate_questions_from_pdf(
             medium=medium,
             chapter_id=chapter_id,
             chapter_name=chapter_name,
-            content=text
+            content=text,
+            generation_type=generation_type
         )
         
         # Reuse logic: Forward to generator service

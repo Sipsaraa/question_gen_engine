@@ -1,17 +1,75 @@
 import io
 import json
-from typing import List
+import textwrap
+from typing import List, Union
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Indenter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Indenter, Image as RLImage, KeepTogether
+
+# Matplotlib for Math Rendering
+import matplotlib
+matplotlib.use('Agg') # Non-interactive backend
+import matplotlib.pyplot as plt
+
 from src.shared.models.question import GeneratedQuestion
+
+def render_math_to_image(text: str, fontsize=12, max_width_char=80) -> Union[RLImage, None]:
+    """
+    Renders text containing LaTeX math ($...$) to a ReportLab Image using Matplotlib.
+    Returns None if rendering fails.
+    """
+    try:
+        # Wrap text for the image
+        wrapped_lines = textwrap.wrap(text, width=max_width_char)
+        wrapped_text = "\n".join(wrapped_lines)
+        
+        # Estimate height based on lines
+        # This is a bit heuristic.
+        lines_count = len(wrapped_lines)
+        fig_height = lines_count * 0.3 + 0.5 # inches
+        fig_width = 7.0 # inches (A4/Letter width minus margins approx)
+
+        fig = plt.figure(figsize=(fig_width, fig_height))
+        # Remove axes
+        ax = fig.add_axes([0, 0, 1, 1])
+        ax.axis('off')
+        
+        # Render text with Math (Matplotlib handles $...$)
+        # use raw string or escape backslashes? textwrap might mess up backslashes?
+        # We assume the input text has proper LaTeX.
+        
+        # Place text at top-left
+        ax.text(0.01, 0.9, wrapped_text, 
+                fontsize=fontsize, 
+                ha='left', 
+                va='top', 
+                wrap=True,
+                family='serif' 
+               )
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=200, transparent=True)
+        plt.close(fig)
+        buf.seek(0)
+        
+        # Create ReportLab Image
+        img = RLImage(buf)
+        # Scale to fit width of PDF column (approx 6.5 inches)
+        img.drawHeight = fig_height * 72 * 0.8 # Scale down a bit to match PDF pts
+        img.drawWidth = fig_width * 72 * 0.8
+        
+        return img
+    except Exception as e:
+        print(f"Error rendering math: {e}")
+        return None
 
 def generate_question_pdf(questions: List[GeneratedQuestion]) -> io.BytesIO:
     """
     Generates a PDF file from a list of GeneratedQuestion objects.
     Correct answers are highlighted in RED.
+    Renders fields with '$' as images for Math support.
     """
     buffer = io.BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
@@ -45,9 +103,19 @@ def generate_question_pdf(questions: List[GeneratedQuestion]) -> io.BytesIO:
         'Explanation',
         parent=styles['BodyText'],
         textColor=colors.blue,
-        fontSize=9,
+        fontSize=10,
         leftIndent=10,
         spaceBefore=5
+    )
+    
+    explanation_title_style = ParagraphStyle(
+        'ExplanationTitle',
+        parent=styles['BodyText'],
+        textColor=colors.black,
+        fontSize=10,
+        leftIndent=10,
+        spaceBefore=5,
+        fontName='Helvetica-Bold'
     )
 
     story = []
@@ -57,72 +125,112 @@ def generate_question_pdf(questions: List[GeneratedQuestion]) -> io.BytesIO:
     story.append(Spacer(1, 20))
     
     for i, q in enumerate(questions, 1):
-        # Question Text
-        # For fill in the blank, we might want to show formatted text, but raw text is okay for now.
-        # If it has placeholders {0}, {1}, we leave them or replace with lines.
-        # Let's replace {n} with _________ for the question text display?
-        # The user said "filling the blank like filling the blank".
+        q_story = [] # Group question elements to keep together if possible
         
+        # --- Question Text ---
         display_text = q.question_text
         if q.question_type == "fill_in_the_blank":
-             # Simple replacement for visual representation
              for placeholder in range(5):
                  display_text = display_text.replace(f"{{{placeholder}}}", "_______")
 
-        story.append(Paragraph(f"{i}. {display_text}", question_style))
+        if "$" in display_text:
+            # Render as Image
+            img = render_math_to_image(f"{i}. {display_text}", fontsize=12, max_width_char=75)
+            if img:
+                q_story.append(img)
+            else:
+                q_story.append(Paragraph(f"{i}. {display_text}", question_style))
+        else:
+            q_story.append(Paragraph(f"{i}. {display_text}", question_style))
         
-        # Parse options and answers
+        
+        # --- Options ---
         try:
             options = json.loads(q.options)
         except:
             options = []
-            
         try:
-            # Answer is stored as a JSON list string "['A']" or "['answer']"
             answers = json.loads(q.answer)
-            # Normalize to set for checking
             answer_set = set(answers)
         except:
             answers = []
             answer_set = set()
 
-        # Display Options
         if q.question_type == 'mcq':
             for opt in options:
-                # Check if this option is the answer
-                # Note: Answer might be the text itself or index. 
-                # The prompt says: "answer is a list containing the single correct option text."
                 is_correct = opt in answer_set
+                bullet = "\u2022"
+                text_content = f"{bullet} {opt}"
                 
-                style = correct_option_style if is_correct else option_style
-                bullet = "\u2022" # Bullet point
-                
-                story.append(Paragraph(f"{bullet} {opt}", style))
+                # Check for math in options
+                if "$" in opt:
+                    img = render_math_to_image(text_content, fontsize=10, max_width_char=80)
+                    if img:
+                        # Indent image? RLImage doesn't support leftIndent easily in Flowable list without Table or Indenter
+                        # Use Indenter
+                        q_story.append(Indenter(left=20))
+                        q_story.append(img)
+                        q_story.append(Indenter(left=-20))
+                    else:
+                         style = correct_option_style if is_correct else option_style
+                         q_story.append(Paragraph(text_content, style))
+                else:
+                    style = correct_option_style if is_correct else option_style
+                    q_story.append(Paragraph(text_content, style))
                 
         elif q.question_type == 'fill_in_the_blank':
-            # Show options bank if available, typically fill in blank might have a word bank
             if options:
-                story.append(Paragraph("Word Bank:", normal_style))
-                # For fill in blank, we just list them.
-                # Highlight the correct words (which are in the answer list) in the bank?
-                # Or just list the answer below?
-                # User request: "mention the correct answer in red"
-                
-                # Let's list options normally
+                q_story.append(Paragraph("Word Bank:", normal_style))
                 bank_text = ", ".join(options)
-                story.append(Paragraph(bank_text, option_style))
+                q_story.append(Paragraph(bank_text, option_style))
             
-            # Show Answer Key for blank
-            # Since blanks need to be filled, we show the answers clearly.
             ans_text = ", ".join(answers)
-            story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
+            q_story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
 
-        # Explanation
-        if q.explanation:
-            story.append(Spacer(1, 5))
-            story.append(Paragraph(f"<b>Explanation:</b> {q.explanation}", explanation_style))
+        elif q.question_type == 'structured':
+            # For structured questions, we might want to leave space or lines for the student to write
+            # But since this is a "QBank Export" which often includes answers, let's just show the question 
+            # and then the answer clearly.
             
-        story.append(Spacer(1, 20))
+            # Maybe add some visual space?
+            q_story.append(Spacer(1, 10))
+            
+            # Show Answer if available
+            if answers:
+                # Structured answers can be long.
+                ans_text = " ".join(answers) 
+                # Check for math in answer
+                if "$" in ans_text:
+                     img = render_math_to_image(f"Answer: {ans_text}", fontsize=10, max_width_char=80)
+                     if img:
+                        q_story.append(Indenter(left=20))
+                        q_story.append(img)
+                        q_story.append(Indenter(left=-20))
+                     else:
+                        q_story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
+                else:
+                    q_story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
+
+        # --- Explanation ---
+        if q.explanation:
+            q_story.append(Spacer(1, 5))
+            q_story.append(Paragraph("Explanation:", explanation_title_style))
+            
+            if "$" in q.explanation:
+                img = render_math_to_image(q.explanation, fontsize=10, max_width_char=90)
+                if img:
+                    q_story.append(Indenter(left=10))
+                    q_story.append(img)
+                    q_story.append(Indenter(left=-10))
+                else:
+                    q_story.append(Paragraph(q.explanation, explanation_style))
+            else:
+                q_story.append(Paragraph(q.explanation, explanation_style))
+            
+        q_story.append(Spacer(1, 20))
+        
+        # Add group to story
+        story.extend(q_story)
     
     doc.build(story)
     buffer.seek(0)

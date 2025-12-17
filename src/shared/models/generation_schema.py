@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 class QuestionType(str, Enum):
     MCQ = "mcq"
     FILL_IN_THE_BLANK = "fill_in_the_blank"
+    STRUCTURED = "structured"
 
 class Question(BaseModel):
     type: QuestionType = Field(description="The type of the question.")

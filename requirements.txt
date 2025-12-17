@@ -3,6 +3,8 @@ uvicorn
 python-multipart
 requests
 google-generativeai
+groq
+matplotlib
 sqlmodel
 python-dotenv
 pytest
