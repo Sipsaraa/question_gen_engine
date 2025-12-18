@@ -83,8 +83,9 @@ class GeminiProvider(BaseLLMProvider):
         else:
             instructions = """
             Requirements:
-            1. GENERATE AS MANY QUESTIONS AS POSSIBLE to cover every concept.
-            2. create a mix of 'mcq' and 'fill_in_the_blank' questions.
+            1. GENERATE AT LEAST 20 QUESTIONS.
+            2. GENERATE AS MANY QUESTIONS AS POSSIBLE to cover every concept.
+            3. Create a mix of 'mcq', 'fill_in_the_blank', and 'structured' questions.
             """
 
         common_instructions = """
@@ -96,7 +97,10 @@ class GeminiProvider(BaseLLMProvider):
         2. For 'mcq':
            - `options` is the list of choices.
            - `answer` is a list containing the single correct option text.
-        3. CRITICAL: For ALL items, provide a detailed `explanation`:
+        3. For 'structured' (descriptive/essay):
+           - `options` MUST be an empty list `[]`.
+           - `answer` MUST be a list containing one string: the complete, detailed model answer/essay.
+        4. CRITICAL: For ALL items, provide a detailed `explanation`:
            - It MUST contain a theoretical explanation of WHY the answer is correct.
            - Use MDX format.
            - Use Single `$` for inline LaTeX equations (e.g. $E=mc^2$).

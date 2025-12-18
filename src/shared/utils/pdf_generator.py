@@ -108,6 +108,16 @@ def generate_question_pdf(questions: List[GeneratedQuestion]) -> io.BytesIO:
         spaceBefore=5
     )
     
+    model_answer_style = ParagraphStyle(
+        'ModelAnswer',
+        parent=styles['BodyText'],
+        textColor=colors.darkgreen,
+        fontSize=11,
+        leftIndent=20,
+        spaceBefore=5,
+        fontName='Helvetica-BoldOblique'
+    )
+    
     explanation_title_style = ParagraphStyle(
         'ExplanationTitle',
         parent=styles['BodyText'],
@@ -188,28 +198,27 @@ def generate_question_pdf(questions: List[GeneratedQuestion]) -> io.BytesIO:
             q_story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
 
         elif q.question_type == 'structured':
-            # For structured questions, we might want to leave space or lines for the student to write
-            # But since this is a "QBank Export" which often includes answers, let's just show the question 
-            # and then the answer clearly.
-            
-            # Maybe add some visual space?
+            # For structured questions, show the model answer clearly.
             q_story.append(Spacer(1, 10))
             
             # Show Answer if available
             if answers:
                 # Structured answers can be long.
                 ans_text = " ".join(answers) 
+                
+                q_story.append(Paragraph("Model Answer:", explanation_title_style))
+                
                 # Check for math in answer
                 if "$" in ans_text:
-                     img = render_math_to_image(f"Answer: {ans_text}", fontsize=10, max_width_char=80)
+                     img = render_math_to_image(ans_text, fontsize=11, max_width_char=80)
                      if img:
                         q_story.append(Indenter(left=20))
                         q_story.append(img)
                         q_story.append(Indenter(left=-20))
                      else:
-                        q_story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
+                        q_story.append(Paragraph(ans_text, model_answer_style))
                 else:
-                    q_story.append(Paragraph(f"Answer: {ans_text}", correct_option_style))
+                    q_story.append(Paragraph(ans_text, model_answer_style))
 
         # --- Explanation ---
         if q.explanation:

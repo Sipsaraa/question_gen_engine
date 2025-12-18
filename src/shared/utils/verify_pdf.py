@@ -29,10 +29,10 @@ def test_pdf_gen():
         chapter_id="PH01",
         chapter_name="Kinematics",
         question_type="structured",
-        question_text="Derive the equation for velocity: $v = u + at$.",
+        question_text="Derive the equation for velocity: $v = u + at$. Show all steps clearly.",
         options="[]",
-        answer=json.dumps(["$v = u + at$"]),
-        explanation="Integration of acceleration $a = dv/dt$ gives the result."
+        answer=json.dumps(["To derive $v = u + at$, we start with the definition of acceleration: $a = \\frac{dv}{dt}$. Rearranging gives $dv = a dt$. Integrating both sides from $t=0$ to $t=t$, we get $\\int_{u}^{v} dv = \\int_{0}^{t} a dt$. Performing the integration: $[v]_{u}^{v} = a[t]_{0}^{t}$, which simplifies to $v - u = at$. Therefore, $v = u + at$."]),
+        explanation="This derivation assumes constant acceleration $a$. It is a fundamental kinematic equation."
     )
     
     questions = [q1, q2]

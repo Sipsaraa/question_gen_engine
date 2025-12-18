@@ -14,12 +14,11 @@ class GeneratedQuestion(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     subject: str
     grade: str
-    grade: str
     medium: str
     chapter_id: str
     chapter_name: str
     
-    question_type: str # 'fill_in_the_blank' or 'mcq'
+    question_type: str # 'fill_in_the_blank', 'mcq', or 'structured'
     question_text: str 
     
     # JSON strings for storage

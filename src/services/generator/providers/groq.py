@@ -99,11 +99,14 @@ class GroqProvider(BaseLLMProvider):
             
         common_instructions = f"""
         Common Rules:
-        1. create a mix of 'mcq' and 'fill_in_the_blank' and 'stuctured' questions.
+        1. create a mix of 'mcq' and 'fill_in_the_blank' and 'structured' questions.
         2. AIM FOR MAXIMUM COVERAGE.
         3. For 'fill_in_the_blank': Use `{{0}}`, `{{1}}` placeholders. `answer` is list of correct words.
         4. For 'mcq': `answer` is list containing correct option text.
-        5. 'explanation': MDX format, explain the concept.
+        5. For 'structured' (descriptive/essay):
+           - `options` MUST be an empty list `[]`.
+           - `answer` MUST be a list containing one string: the complete, detailed model answer/essay.
+        6. 'explanation': MDX format, explain the concept.
         
         OUTPUT MUST BE VALID JSON MATCHING THIS SCHEMA:
         {schema_json}
