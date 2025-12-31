@@ -179,7 +179,6 @@ async def generate_questions_from_pdf(
     generation_type: str = Form("general"),
 ):
     print(f"Received PDF upload for {subject} - {chapter_name} ({generation_type})")
-    breakpoint()
     try:
         file_content = await file.read()
         text = extract_text_from_pdf(file_content)

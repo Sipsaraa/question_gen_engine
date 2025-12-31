@@ -29,17 +29,42 @@ class GeneratorService:
     def __init__(self):
         self.providers = []
         
-        # Initialize providers
-        # 1. Gemini (Primary)
-        gemini_key = os.getenv("GOOGLE_API_KEY")
-        if gemini_key:
-            self.providers.append(GeminiProvider(api_key=gemini_key))
+        # Load generator preferences from env
+        primary = os.getenv("PRIMARY_GENERATOR", "gemini").lower()
+        fallback = os.getenv("FALLBACK_GENERATOR", "groq").lower()
         
-        # 2. Groq (Fallback) - Great for speed and often has generous free tiers
-        groq_key = os.getenv("GROQ_API_KEY")
-        if groq_key:
-            self.providers.append(GroqProvider(api_key=groq_key))
+        # Define available providers
+        available_configs = {
+            "gemini": {
+                "class": GeminiProvider,
+                "key_env": "GOOGLE_API_KEY",
+                "display_name": "Gemini"
+            },
+            "groq": {
+                "class": GroqProvider,
+                "key_env": "GROQ_API_KEY",
+                "display_name": "Groq"
+            }
+        }
+        
+        # Determine the order based on env vars
+        requested_order = [primary, fallback]
+        seen_providers = set()
+        
+        for provider_id in requested_order:
+            if provider_id not in available_configs or provider_id in seen_providers:
+                continue
+                
+            config = available_configs[provider_id]
+            api_key = os.getenv(config["key_env"])
             
+            if api_key:
+                print(f"Initializing {config['display_name']} provider...")
+                self.providers.append(config["class"](api_key=api_key))
+                seen_providers.add(provider_id)
+            else:
+                print(f"Skipping {config['display_name']} provider: {config['key_env']} not found.")
+                
         if not self.providers:
             print("CRITICAL WARNING: No LLM providers configured. Check GOOGLE_API_KEY and GROQ_API_KEY.")
 

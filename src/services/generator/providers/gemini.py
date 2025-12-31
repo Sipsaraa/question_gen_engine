@@ -13,7 +13,7 @@ class GeminiProvider(BaseLLMProvider):
             print("WARNING: GOOGLE_API_KEY not found for GeminiProvider.")
         else:
             genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-2.5-flash')
+            self.model = genai.GenerativeModel('gemini-2.5-pro')
 
     @property
     def provider_name(self) -> str:

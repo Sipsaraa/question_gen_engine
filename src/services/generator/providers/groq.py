@@ -81,7 +81,7 @@ class GroqProvider(BaseLLMProvider):
         if content.generation_type == "physics":
             instructions = """
             Requirements (PHYSICS MODE):
-            1. GENERATE AT LEAST 20 QUESTIONS. COMPULSORY.
+            
             2. Questions MUST be physically accurate and test conceptual depth.
             3. Generate physics based questions with calculations.
             4. Include application-based problems with realistic values working out to meaningful answers.
@@ -107,6 +107,7 @@ class GroqProvider(BaseLLMProvider):
            - `options` MUST be an empty list `[]`.
            - `answer` MUST be a list containing one string: the complete, detailed model answer/essay.
         6. 'explanation': MDX format, explain the concept.
+        7. GENERATE AT LEAST 20 QUESTIONS. COMPULSORY.
         
         OUTPUT MUST BE VALID JSON MATCHING THIS SCHEMA:
         {schema_json}
