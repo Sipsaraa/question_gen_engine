@@ -1,13 +1,15 @@
 import os
 import json
+import time
 from typing import List, Optional
 from groq import Groq
 from src.services.generator.providers.base import BaseLLMProvider
 from src.shared.models.question import SyllabusContent, GeneratedQuestion
 from src.shared.models.generation_schema import QuestionBank
+from src.shared.utils.text_utils import chunk_text
 
 class GroqProvider(BaseLLMProvider):
-    def __init__(self, api_key: str = None, model: str = "llama-3.3-70b-versatile"):
+    def __init__(self, api_key: str = None, model: str = "qwen/qwen3-32b"):
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         self.model_name = model
         if not self.api_key:
@@ -23,6 +25,43 @@ class GroqProvider(BaseLLMProvider):
         if not self.api_key:
             raise ValueError("Groq API Key is missing")
 
+        # Check content length and chunk if necessary
+        # 1 token approx 4 chars. Limit 6000 TPM. 
+        # Safe limit: 4000 tokens -> ~16000 chars. 
+        # We use 15000 chars to be safe including prompt overhead.
+        MAX_CHARS_PER_CHUNK = 15000
+        
+        if len(content.content) > MAX_CHARS_PER_CHUNK:
+            print(f"DEBUG: Content too large ({len(content.content)} chars). Chunking...")
+            chunks = chunk_text(content.content, max_chars=MAX_CHARS_PER_CHUNK)
+            all_questions = []
+            
+            for i, chunk_text_str in enumerate(chunks):
+                print(f"DEBUG: Processing chunk {i+1}/{len(chunks)}...")
+                
+                # Create a temporary content object for this chunk
+                chunk_content = content.model_copy(update={"content": chunk_text_str})
+                
+                try:
+                    questions = self._generate_single_batch(chunk_content)
+                    all_questions.extend(questions)
+                    
+                    # Throttle if not the last chunk
+                    if i < len(chunks) - 1:
+                        print("DEBUG: Sleeping 60s to respect Rate Limit (6000 TPM)...")
+                        time.sleep(60)
+                        
+                except Exception as e:
+                    print(f"Error processing chunk {i+1}: {e}")
+                    # Continue to next chunk or raise? 
+                    # For now, let's log and continue to try getting partial results
+                    continue
+            
+            return all_questions
+        else:
+             return self._generate_single_batch(content)
+
+    def _generate_single_batch(self, content: SyllabusContent) -> List[GeneratedQuestion]:
         prompt = self._build_prompt(content)
         
         try:
@@ -33,7 +72,7 @@ class GroqProvider(BaseLLMProvider):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are an expert educational content creator that outputs stricly valid JSON."
+                        "content": "You are an expert educational content creator. You must output a SINGLE valid JSON object. Do not wrap the output in a list."
                     },
                     {
                         "role": "user",
@@ -111,6 +150,8 @@ class GroqProvider(BaseLLMProvider):
         
         OUTPUT MUST BE VALID JSON MATCHING THIS SCHEMA:
         {schema_json}
+        
+        IMPORTANT: Return a SINGLE JSON OBJECT `{{ "questions": [...] }}`. Do NOT return a list `[...]`.
         """
         
         return base_prompt + instructions + common_instructions

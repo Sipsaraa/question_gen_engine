@@ -5,6 +5,7 @@ from typing import List, Optional
 from src.shared.models.question import GeneratedQuestion, SyllabusContent
 from src.shared.utils.pdf_utils import extract_text_from_pdf
 from src.shared.utils.pdf_generator import generate_question_pdf
+from src.shared.utils.text_utils import chunk_text
 
 app = FastAPI(title="Question Gen Gateway")
 
@@ -188,37 +189,58 @@ async def generate_questions_from_pdf(
             
         print(f"Extracted {len(text)} chars from PDF")
         
-        # Create content object
-        content = SyllabusContent(
-            subject=subject,
-            grade=grade,
-            medium=medium,
-            chapter_id=chapter_id,
-            chapter_name=chapter_name,
-            content=text,
-            generation_type=generation_type
-        )
+        # Chunk the text to avoid token limits
+        chunks = chunk_text(text, max_chars=30000) # approx 7-8k tokens
+        print(f"Split into {len(chunks)} chunks")
         
-        # Reuse logic: Forward to generator service
-        # (Ideally this should be a shared helper, but duplicate for now for safety)
+        all_questions = []
         target_url = get_service_url("generator")
-        print(f"Routing PDF generation request to: {target_url}") 
+        print(f"Routing PDF generation requests to: {target_url}") 
         
         async with httpx.AsyncClient() as client:
-            try:
-                # Forward the request body
-                response = await client.post(
-                    f"{target_url}/generate", 
-                    json=content.model_dump(),
-                    timeout=120.0 # Increased timeout for PDFs
-                )
-                response.raise_for_status()
-                return response.json()
-            except httpx.RequestError as exc:
-                raise HTTPException(status_code=503, detail=f"Generation service unreachable ({target_url}): {exc}")
-            except httpx.HTTPStatusError as exc:
-                raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+            for i, chunk in enumerate(chunks):
+                print(f"Processing chunk {i+1}/{len(chunks)} ({len(chunk)} chars)...")
                 
+                # Create content object for this chunk
+                content = SyllabusContent(
+                    subject=subject,
+                    grade=grade,
+                    medium=medium,
+                    chapter_id=chapter_id,
+                    chapter_name=chapter_name,
+                    content=chunk,
+                    generation_type=generation_type
+                )
+                
+                try:
+                    # Forward the request body
+                    response = await client.post(
+                        f"{target_url}/generate", 
+                        json=content.model_dump(),
+                        timeout=120.0 
+                    )
+                    response.raise_for_status()
+                    questions = response.json()
+                    print(f"Got {len(questions)} questions from chunk {i+1}")
+                    
+                    # Convert dicts back to objects to ensure structure (optional but good practice)
+                    # For now just extend the list
+                    all_questions.extend(questions)
+                    
+                except httpx.RequestError as exc:
+                    print(f"Error processing chunk {i+1}: {exc}")
+                    # Decide if we want to fail completely or continue. 
+                    # Failing completely is probably safer for now to avoid partial results masquerading as full success?
+                    # But for large docs, partial might be better. Let's fail for now as requested by user effectively.
+                    raise HTTPException(status_code=503, detail=f"Generation service unreachable during chunk {i+1}: {exc}")
+                except httpx.HTTPStatusError as exc:
+                    print(f"Error processing chunk {i+1}: {exc.response.text}")
+                    raise HTTPException(status_code=exc.response.status_code, detail=f"Error in chunk {i+1}: {exc.response.text}")
+                    
+        return all_questions
+
+    except HTTPException:
+        raise
     except Exception as e:
         print(f"Error processing PDF: {e}")
         raise HTTPException(status_code=500, detail=str(e))
