@@ -1,5 +1,6 @@
 import httpx
-from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, Form
+from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, Form, Depends, status
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.responses import StreamingResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from typing import List, Optional
@@ -35,8 +36,83 @@ from pydantic import BaseModel
 SERVICE_REGISTRY = {
     "science_qbank": [], 
     "general_qbank": [],
-    "generator": [] 
+    "generator": [],
+    "auth_service": []
 }
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/token")
+
+async def verify_auth_token(token: str = Depends(oauth2_scheme)):
+    """
+    Verifies the token by calling the Auth Service.
+    We proxy the verification to ensure revocation checks are respected.
+    """
+    auth_service_url = get_service_url("auth_service")
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(f"{auth_service_url}/verify", json={"token": token})
+            response.raise_for_status()
+            return response.json()
+        except httpx.HTTPStatusError as exc:
+            raise HTTPException(status_code=exc.response.status_code, detail="Invalid Authentication")
+        except httpx.RequestError:
+             raise HTTPException(status_code=503, detail="Auth Service Unavailable")
+
+# --- Auth Proxy Endpoints ---
+
+@app.post("/auth/token", tags=["Auth"], summary="Admin Login")
+async def login_proxy(form_data: OAuth2PasswordRequestForm = Depends()):
+    auth_service_url = get_service_url("auth_service")
+    async with httpx.AsyncClient() as client:
+        # Re-construct form data
+        response = await client.post(
+            f"{auth_service_url}/token", 
+            data={"username": form_data.username, "password": form_data.password}
+        )
+        if response.status_code != 200:
+             raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@app.get("/auth/users/me", tags=["Auth"])
+async def read_users_me_proxy(current_user: dict = Depends(verify_auth_token)):
+    return current_user
+
+# --- API Key Management Proxy (Admin Only) ---
+# We just proxy these. The Auth Service handles the admin check via the JWT passed in header.
+
+@app.post("/auth/api-keys", tags=["Auth"])
+async def create_api_key_proxy(request: Request, current_user: dict = Depends(verify_auth_token)):
+    auth_service_url = get_service_url("auth_service")
+    # Forward the raw JSON body and the Authorization header
+    body = await request.json()
+    headers = {"Authorization": request.headers.get("Authorization")}
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{auth_service_url}/api-keys", json=body, headers=headers)
+        return response.json()
+
+@app.get("/auth/api-keys", tags=["Auth"])
+async def list_api_keys_proxy(request: Request, current_user: dict = Depends(verify_auth_token)):
+    auth_service_url = get_service_url("auth_service")
+    headers = {"Authorization": request.headers.get("Authorization")}
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(f"{auth_service_url}/api-keys", headers=headers)
+        if response.status_code != 200:
+             raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
+@app.delete("/auth/api-keys/{key_id}", tags=["Auth"])
+async def revoke_api_key_proxy(key_id: str, request: Request, current_user: dict = Depends(verify_auth_token)):
+    auth_service_url = get_service_url("auth_service")
+    headers = {"Authorization": request.headers.get("Authorization")}
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.delete(f"{auth_service_url}/api-keys/{key_id}", headers=headers)
+        if response.status_code != 200:
+             raise HTTPException(status_code=response.status_code, detail=response.text)
+        return response.json()
+
 
 class ServiceRegistration(BaseModel):
     name: str
@@ -183,7 +259,10 @@ async def list_questions(
             raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
 
 @app.post("/generate", response_model=List[GeneratedQuestion], tags=["Generator"], summary="Generate Questions")
-async def generate_questions(content: SyllabusContent):
+async def generate_questions(
+    content: SyllabusContent, 
+    user: dict = Depends(verify_auth_token)
+):
     """
     Triggers question generation based on syllabus content.
     """
@@ -216,6 +295,7 @@ async def generate_questions_from_pdf(
     chapter_id: str = Form(...),
     chapter_name: str = Form(...),
     generation_type: str = Form("general"),
+    user: dict = Depends(verify_auth_token)
 ):
     print(f"Received PDF upload for {subject} - {chapter_name} ({generation_type})")
     try:

@@ -60,6 +60,26 @@ services:
     networks:
       - qgen_network
 
+  auth:
+    build: .
+    command: uvicorn src.services.auth.main:app --host 0.0.0.0 --port ${AUTH_PORT} --reload
+    ports:
+      - "${AUTH_PORT}:${AUTH_PORT}"
+    environment:
+      - SERVICE_PORT=${AUTH_PORT}
+      - SERVICE_HOST=auth
+      - GATEWAY_URL=http://gateway:${GATEWAY_PORT}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+    depends_on:
+      db:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    networks:
+      - qgen_network
+
   db:
     image: postgres:16-alpine
     restart: always

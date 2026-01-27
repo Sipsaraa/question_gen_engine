@@ -40,4 +40,5 @@ nav:
       - QBank: services/qbank.md
       - Generator: services/generator.md
       - Exporting: services/export.md
+  - Authentication: authentication.md
   - API Reference: http://127.0.0.1:8000/docs
