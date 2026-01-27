@@ -26,6 +26,10 @@ def start_service(command, port, name, env=None):
 def main():
     procs = []
     try:
+        # 0. Build Documentation
+        print("Building Documentation...")
+        subprocess.run([sys.executable, "-m", "mkdocs", "build"], check=False)
+
         # 1. Start Gateway FIRST causing it to be the registry
         # We need it up so services can register
         procs.append(start_service("src.services.gateway.main:app", 8000, "Gateway", {"SERVICE_PORT": "8000"}))

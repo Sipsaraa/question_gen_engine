@@ -1,0 +1,43 @@
+site_name: Question Generation Engine
+site_description: Documentation for the Question Generation Engine Microservices
+site_url: http://localhost:8000
+theme:
+  name: material
+  font:
+    text: Roboto
+    code: Roboto Mono
+  palette:
+    # Light Mode
+    - scheme: default
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark Mode
+    - scheme: slate
+      primary: black
+      accent: orange
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.top
+    - navigation.tracking
+    - navigation.footer
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.action.edit
+
+nav:
+  - Home: index.md
+  - Architecture: architecture.md
+  - Service Guide:
+      - QBank: services/qbank.md
+      - Generator: services/generator.md
+      - Exporting: services/export.md
+  - API Reference: http://127.0.0.1:8000/docs

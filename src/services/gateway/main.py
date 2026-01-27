@@ -1,13 +1,32 @@
 import httpx
 from fastapi import FastAPI, HTTPException, Query, Request, UploadFile, File, Form
-from fastapi.responses import StreamingResponse
+from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 from typing import List, Optional
 from src.shared.models.question import GeneratedQuestion, SyllabusContent
 from src.shared.utils.pdf_utils import extract_text_from_pdf
 from src.shared.utils.pdf_generator import generate_question_pdf
 from src.shared.utils.text_utils import chunk_text
+import os
 
-app = FastAPI(title="Question Gen Gateway")
+app = FastAPI(
+    title="Question Gen Gateway",
+    description="Gateway service for the Question Generation Engine. Routes requests to specialized services.",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+# Mount Static Documentation (MkDocs)
+site_path = os.path.join(os.getcwd(), "site")
+if os.path.exists(site_path):
+    app.mount("/help", StaticFiles(directory=site_path, html=True), name="help")
+else:
+    print("Warning: 'site' directory not found. Run 'mkdocs build' first.")
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/help")
 
 # Configuration
 from pydantic import BaseModel
@@ -23,8 +42,11 @@ class ServiceRegistration(BaseModel):
     name: str
     url: str
 
-@app.post("/registry/register")
+@app.post("/registry/register", tags=["System"], summary="Register a Service")
 def register_service(param: ServiceRegistration):
+    """
+    Registers a new service instance with the gateway.
+    """
     if param.name not in SERVICE_REGISTRY:
         SERVICE_REGISTRY[param.name] = []
     
@@ -33,8 +55,11 @@ def register_service(param: ServiceRegistration):
         print(f"Registered {param.name} at {param.url}")
     return {"status": "registered", "current_nodes": len(SERVICE_REGISTRY[param.name])}
 
-@app.post("/registry/deregister")
+@app.post("/registry/deregister", tags=["System"], summary="Deregister a Service")
 def deregister_service(param: ServiceRegistration):
+    """
+    Removes a service instance from the gateway registry.
+    """
     if param.name in SERVICE_REGISTRY and param.url in SERVICE_REGISTRY[param.name]:
         SERVICE_REGISTRY[param.name].remove(param.url)
         print(f"Deregistered {param.name} at {param.url}")
@@ -48,11 +73,14 @@ def get_service_url(service_name: str) -> str:
         raise HTTPException(status_code=503, detail=f"No healthy instances for service: {service_name}")
     return random.choice(urls)
 
-@app.get("/health")
+@app.get("/health", tags=["System"], summary="Health Check")
 def health_check():
+    """
+    Checks the health of the Gateway service.
+    """
     return {"status": "ok", "service": "Gateway", "registry": SERVICE_REGISTRY}
 
-@app.get("/questions/export/pdf")
+@app.get("/questions/export/pdf", tags=["Export"], summary="Export Questions to PDF")
 async def export_questions_pdf(
     subject: str,
     grade: str,
@@ -61,6 +89,9 @@ async def export_questions_pdf(
     start_id: Optional[int] = None,
     end_id: Optional[int] = None
 ):
+    """
+    Fetches questions from the QBank and generates a PDF file.
+    """
     # 1. Fetch questions from QBank (or specific subject QBank)
     target_service = "general_qbank"
     if subject:
@@ -115,11 +146,14 @@ async def export_questions_pdf(
         except httpx.HTTPStatusError as exc:
             raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
 
-@app.get("/questions", response_model=List[GeneratedQuestion])
+@app.get("/questions", response_model=List[GeneratedQuestion], tags=["QBank"], summary="List Questions")
 async def list_questions(
     medium: Optional[str] = None, 
     subject: Optional[str] = None
 ):
+    """
+    Retrieves a list of questions from the appropriate QBank service.
+    """
     # Dynamic Lookup
     target_service = "general_qbank"
     
@@ -148,8 +182,11 @@ async def list_questions(
         except httpx.HTTPStatusError as exc:
             raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
 
-@app.post("/generate", response_model=List[GeneratedQuestion])
+@app.post("/generate", response_model=List[GeneratedQuestion], tags=["Generator"], summary="Generate Questions")
 async def generate_questions(content: SyllabusContent):
+    """
+    Triggers question generation based on syllabus content.
+    """
     target_url = get_service_url("generator")
     print(f"Routing generation request to: {target_url}") 
     
@@ -164,10 +201,11 @@ async def generate_questions(content: SyllabusContent):
             response.raise_for_status()
             return response.json()
         except httpx.RequestError as exc:
-            # Basic Retry or Remove from Registry logic could go here
-            raise HTTPException(status_code=503, detail=f"Generation service unreachable ({target_url}): {exc}")
+            raise HTTPException(status_code=503, detail=f"Service unreachable ({target_url}): {exc}")
         except httpx.HTTPStatusError as exc:
             raise HTTPException(status_code=exc.response.status_code, detail=exc.response.text)
+
+
 
 @app.post("/generate/pdf", response_model=List[GeneratedQuestion])
 async def generate_questions_from_pdf(
