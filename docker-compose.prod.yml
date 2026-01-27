@@ -1,7 +1,7 @@
 services:
   gateway:
     build: .
-    command: uvicorn src.services.gateway.main:app --host 0.0.0.0 --port ${GATEWAY_PORT} --reload
+    command: uvicorn src.services.gateway.main:app --host 0.0.0.0 --port ${GATEWAY_PORT}
     ports:
       - "${GATEWAY_PORT}:${GATEWAY_PORT}"
     environment:
@@ -17,7 +17,7 @@ services:
 
   qbank:
     build: .
-    command: uvicorn src.services.qbank.main:app --host 0.0.0.0 --port ${QBANK_PORT} --reload
+    command: uvicorn src.services.qbank.main:app --host 0.0.0.0 --port ${QBANK_PORT}
     ports:
       - "${QBANK_PORT}:${QBANK_PORT}"
     environment:
@@ -31,8 +31,6 @@ services:
       - PRIMARY_GENERATOR=${PRIMARY_GENERATOR}
       - FALLBACK_GENERATOR=${FALLBACK_GENERATOR}
     depends_on:
-      db:
-        condition: service_healthy
       gateway:
         condition: service_healthy
     networks:
@@ -40,7 +38,7 @@ services:
 
   generator:
     build: .
-    command: uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT} --reload
+    command: uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT}
     ports:
       - "${GENERATOR_PORT}:${GENERATOR_PORT}"
     environment:
@@ -53,8 +51,6 @@ services:
       - PRIMARY_GENERATOR=${PRIMARY_GENERATOR}
       - FALLBACK_GENERATOR=${FALLBACK_GENERATOR}
     depends_on:
-      db:
-        condition: service_healthy
       gateway:
         condition: service_healthy
     networks:
@@ -62,7 +58,7 @@ services:
 
   auth:
     build: .
-    command: uvicorn src.services.auth.main:app --host 0.0.0.0 --port ${AUTH_PORT} --reload
+    command: uvicorn src.services.auth.main:app --host 0.0.0.0 --port ${AUTH_PORT}
     ports:
       - "${AUTH_PORT}:${AUTH_PORT}"
     environment:
@@ -73,35 +69,10 @@ services:
       - AUTH_SECRET_KEY=${AUTH_SECRET_KEY}
       - ALGORITHM=${ALGORITHM}
     depends_on:
-      db:
-        condition: service_healthy
       gateway:
         condition: service_healthy
     networks:
       - qgen_network
-
-  db:
-    image: postgres:16-alpine
-    restart: always
-    environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-    ports:
-      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    networks:
-      - qgen_network
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-volumes:
-  postgres_data:
-
 
 networks:
   qgen_network:
