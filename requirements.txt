@@ -80,3 +80,4 @@ uritemplate==4.2.0
 urllib3==2.6.2
 uvicorn==0.40.0
 watchdog==6.0.0
+psycopg2-binary==2.9.9

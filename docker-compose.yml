@@ -1,0 +1,88 @@
+services:
+  gateway:
+    build: .
+    command: uvicorn src.services.gateway.main:app --host 0.0.0.0 --port ${GATEWAY_PORT} --reload
+    ports:
+      - "${GATEWAY_PORT}:${GATEWAY_PORT}"
+    environment:
+      - GATEWAY_URL=http://gateway:${GATEWAY_PORT}
+      - SERVICE_REGISTRY={"science_qbank":[],"general_qbank":[],"generator":[]}
+    networks:
+      - qgen_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:${GATEWAY_PORT}/health" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  qbank:
+    build: .
+    command: uvicorn src.services.qbank.main:app --host 0.0.0.0 --port ${QBANK_PORT} --reload
+    ports:
+      - "${QBANK_PORT}:${QBANK_PORT}"
+    environment:
+      - SERVICE_NAME=general_qbank
+      - SERVICE_PORT=${QBANK_PORT}
+      - SERVICE_HOST=qbank
+      - GATEWAY_URL=http://gateway:${GATEWAY_PORT}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PRIMARY_GENERATOR=${PRIMARY_GENERATOR}
+      - FALLBACK_GENERATOR=${FALLBACK_GENERATOR}
+    depends_on:
+      db:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    networks:
+      - qgen_network
+
+  generator:
+    build: .
+    command: uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT} --reload
+    ports:
+      - "${GENERATOR_PORT}:${GENERATOR_PORT}"
+    environment:
+      - SERVICE_PORT=${GENERATOR_PORT}
+      - SERVICE_HOST=generator
+      - GATEWAY_URL=http://gateway:${GATEWAY_PORT}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:${POSTGRES_PORT}/${POSTGRES_DB}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
+      - GROQ_API_KEY=${GROQ_API_KEY}
+      - PRIMARY_GENERATOR=${PRIMARY_GENERATOR}
+      - FALLBACK_GENERATOR=${FALLBACK_GENERATOR}
+    depends_on:
+      db:
+        condition: service_healthy
+      gateway:
+        condition: service_healthy
+    networks:
+      - qgen_network
+
+  db:
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:${POSTGRES_PORT}"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - qgen_network
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:
+
+
+networks:
+  qgen_network:
+    driver: bridge

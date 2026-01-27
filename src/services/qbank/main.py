@@ -14,22 +14,39 @@ from src.shared.core.database import get_session, create_db_and_tables
 SERVICE_PORT = os.getenv("SERVICE_PORT", "8002")
 SERVICE_NAME = os.getenv("SERVICE_NAME", "general_qbank") # Default to general if not specified
 GATEWAY_URL = os.getenv("GATEWAY_URL", "http://127.0.0.1:8000")
-SERVICE_URL = f"http://127.0.0.1:{SERVICE_PORT}"
+SERVICE_HOST = os.getenv("SERVICE_HOST", "127.0.0.1")
+SERVICE_URL = f"http://{SERVICE_HOST}:{SERVICE_PORT}"
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     create_db_and_tables()
     
-    # Registration
-    try:
-        async with httpx.AsyncClient() as client:
-            print(f"Registering {SERVICE_NAME} at {SERVICE_URL} with Gateway...")
-            await client.post(
-                f"{GATEWAY_URL}/registry/register", 
-                json={"name": SERVICE_NAME, "url": SERVICE_URL}
-            )
-    except Exception as e:
-        print(f"Failed to register service: {e}")
+    # Registration with Retry
+    import time
+    max_retries = 10
+    for attempt in range(max_retries):
+        try:
+            async with httpx.AsyncClient() as client:
+                print(f"Registering {SERVICE_NAME} at {SERVICE_URL} with Gateway (Attempt {attempt+1}/{max_retries})...")
+                resp = await client.post(
+                    f"{GATEWAY_URL}/registry/register", 
+                    json={"name": SERVICE_NAME, "url": SERVICE_URL},
+                    timeout=5.0
+                )
+                if resp.status_code == 200:
+                    print(f"Successfully registered {SERVICE_NAME}")
+                    break
+        except Exception as e:
+            print(f"Failed to register service (Attempt {attempt+1}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2)
+        else:
+             if resp.status_code != 200:
+                 print(f"Registration failed with status {resp.status_code}")
+                 if attempt < max_retries - 1:
+                    time.sleep(2)
+    else:
+        print("CRITICAL: Failed to register service after all attempts.")
         
     yield
     
