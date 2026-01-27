@@ -18,8 +18,8 @@ services:
   qbank:
     build: .
     command: uvicorn src.services.qbank.main:app --host 0.0.0.0 --port ${QBANK_PORT} --reload
-    ports:
-      - "${QBANK_PORT}:${QBANK_PORT}"
+    # ports:
+    #   - "${QBANK_PORT}:${QBANK_PORT}"
     environment:
       - SERVICE_NAME=general_qbank
       - SERVICE_PORT=${QBANK_PORT}
@@ -41,8 +41,8 @@ services:
   generator:
     build: .
     command: uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT} --reload
-    ports:
-      - "${GENERATOR_PORT}:${GENERATOR_PORT}"
+    # ports:
+    #   - "${GENERATOR_PORT}:${GENERATOR_PORT}"
     environment:
       - SERVICE_PORT=${GENERATOR_PORT}
       - SERVICE_HOST=generator
@@ -63,8 +63,8 @@ services:
   auth:
     build: .
     command: uvicorn src.services.auth.main:app --host 0.0.0.0 --port ${AUTH_PORT} --reload
-    ports:
-      - "${AUTH_PORT}:${AUTH_PORT}"
+    # ports:
+    #   - "${AUTH_PORT}:${AUTH_PORT}"
     environment:
       - SERVICE_PORT=${AUTH_PORT}
       - SERVICE_HOST=auth
