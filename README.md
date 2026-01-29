@@ -2,7 +2,7 @@
 
 Welcome to the **Question Generation Engine**, a microservices-based system designed to automatically generate educational questions from syllabus content or PDF documents using advanced LLMs (Gemini, Groq).
 
-## 🚀 Features
+## Features
 
 - **Multi-Model Support**: Leverages Google Gemini and Groq (Llama 3) for high-quality generation.
 - **Microservices Architecture**: Decoupled services for Gateway, Question Bank, Generation, and Authentication.
@@ -11,7 +11,7 @@ Welcome to the **Question Generation Engine**, a microservices-based system desi
 - **Authentication**: Secure admin access and API key management for external clients.
 - **Documentation**: Comprehensive architecture diagrams and API docs.
 
-## 🏗 Architecture
+## Architecture
 
 The system consists of the following services:
 
@@ -23,18 +23,18 @@ The system consists of the following services:
 
 See [docs/architecture.md](docs/architecture.md) for detailed diagrams and schema.
 
-## 🛠 Prerequisites
+## Prerequisites
 
 - [Docker](https://www.docker.com/) & Docker Compose
 - Python 3.11+ (for local development)
 - API Keys for Google AI Studio and Groq
 
-## ⚡ Quick Start
+## Quick Start
 
 1. **Clone the repository**
 
    ```bash
-   git clone https://github.com/yourusername/question_gen_engine.git
+   git clone https://github.com/Sipsaraa/question_gen_engine.git
    cd question_gen_engine
    ```
 
@@ -57,7 +57,7 @@ See [docs/architecture.md](docs/architecture.md) for detailed diagrams and schem
    - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
    - **Architecture Docs**: [http://localhost:8000/help](http://localhost:8000/help) (if mounted)
 
-## 📖 Documentation
+## Documentation
 
 - **Architecture**: `docs/architecture.md`
 - **Authentication**: `docs/authentication.md`
@@ -70,10 +70,10 @@ pip install mkdocs-material
 mkdocs serve
 ```
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to help improve this project.
 
-## 📄 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
