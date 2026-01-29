@@ -1,6 +1,6 @@
 services:
   gateway:
-    build: .
+    image: ghcr.io/sipsaraa/question_gen_engine:latest
     command: uvicorn src.services.gateway.main:app --host 0.0.0.0 --port ${GATEWAY_PORT}
     ports:
       - "${GATEWAY_PORT}:${GATEWAY_PORT}"
@@ -16,10 +16,8 @@ services:
       retries: 5
 
   qbank:
-    build: .
+    image: ghcr.io/sipsaraa/question_gen_engine:latest
     command: uvicorn src.services.qbank.main:app --host 0.0.0.0 --port ${QBANK_PORT}
-    # ports:
-    #   - "${QBANK_PORT}:${QBANK_PORT}"
     environment:
       - SERVICE_NAME=general_qbank
       - SERVICE_PORT=${QBANK_PORT}
@@ -37,10 +35,8 @@ services:
       - qgen_network
 
   generator:
-    build: .
+    image: ghcr.io/sipsaraa/question_gen_engine:latest
     command: uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT}
-    # ports:
-    #   - "${GENERATOR_PORT}:${GENERATOR_PORT}"
     environment:
       - SERVICE_PORT=${GENERATOR_PORT}
       - SERVICE_HOST=generator
@@ -57,10 +53,8 @@ services:
       - qgen_network
 
   auth:
-    build: .
+    image: ghcr.io/sipsaraa/question_gen_engine:latest
     command: uvicorn src.services.auth.main:app --host 0.0.0.0 --port ${AUTH_PORT}
-    # ports:
-    #   - "${AUTH_PORT}:${AUTH_PORT}"
     environment:
       - SERVICE_PORT=${AUTH_PORT}
       - SERVICE_HOST=auth
