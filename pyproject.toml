@@ -7,20 +7,12 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi",
     "uvicorn",
-    "sqlmodel",
-    "psycopg2-binary",
-    "python-jose[cryptography]",
-    "passlib[bcrypt]",
-    "bcrypt",
-    "google-generativeai",
     "groq",
     "python-multipart",
     "requests",
     "pypdf",
     "python-dotenv",
     "PyYAML",
-    "reportlab",
-    "matplotlib>=3.10.8",
 ]
 
 [dependency-groups]

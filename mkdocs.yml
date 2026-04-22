@@ -1,0 +1,32 @@
+site_name: Question Generation Engine
+site_description: Documentation for the Sipsaraa Question Generation Engine
+theme:
+  name: material
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: teal
+      accent: cyan
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - content.code.copy
+    - content.code.annotate
+
+nav:
+  - Welcome: index.md
+  - API Reference: api.md
+  - Setup Guide: setup.md
+
+plugins:
+  - search

@@ -13,6 +13,17 @@ services:
     networks:
       - qgen_network
 
+  docs:
+    build: .
+    command: uv run mkdocs serve --dev-addr 0.0.0.0:8005
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./docs:/app/docs
+      - ./mkdocs.yml:/app/mkdocs.yml
+    networks:
+      - qgen_network
+
 networks:
   qgen_network:
     driver: bridge

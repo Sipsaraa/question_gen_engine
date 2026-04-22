@@ -40,6 +40,12 @@ lint: ## Check code style
 test: ## Run tests
 	uv run pytest -v
 
+docs-serve: ## Serve documentation locally
+	uv run mkdocs serve
+
+docs-build: ## Build documentation site
+	uv run mkdocs build
+
 clean: ## Clean up caches
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type d -name ".pytest_cache" -exec rm -rf {} +

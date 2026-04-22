@@ -38,7 +38,16 @@ make up-build
 
 The engine will be available at [http://localhost:8004](http://localhost:8004).
 
-### 3. API Usage
+## Documentation
+
+The service includes a built-in documentation site. To view it:
+
+1. **Start with Docker**: `make up-build`
+2. **Access**: [http://localhost:8005](http://localhost:8005)
+
+Alternatively, run locally: `make docs-serve`.
+
+## API Usage
 
 #### POST `/generate`
 
