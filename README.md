@@ -1,79 +1,83 @@
-# Question Generation Engine
+# Sipsaraa - Question Generation Engine
 
-Welcome to the **Question Generation Engine**, a microservices-based system designed to automatically generate educational questions from syllabus content or PDF documents using advanced LLMs (Gemini, Groq).
+A streamlined, stateless engine powered by Groq (Llama 3.3) for generating high-quality educational questions.
 
 ## Features
 
-- **Multi-Model Support**: Leverages Google Gemini and Groq (Llama 3) for high-quality generation.
-- **Microservices Architecture**: Decoupled services for Gateway, Question Bank, Generation, and Authentication.
-- **PDF Processing**: Upload chapters as PDFs and automatically generate structured questions.
-- **Question Bank**: Persist, manage, and export generated questions.
-- **Authentication**: Secure admin access and API key management for external clients.
-- **Documentation**: Comprehensive architecture diagrams and API docs.
-
-## Architecture
-
-The system consists of the following services:
-
-- **Gateway**: Entry point, service discovery, and routing.
-- **Auth**: Manages admin users and API keys.
-- **Generator**: Interacts with LLMs to create content.
-- **QBank**: Stores and retrieves questions (CRUD).
-- **Database**: Shared PostgreSQL instance.
-
-See [docs/architecture.md](docs/architecture.md) for detailed diagrams and schema.
+- **Stateless Architecture**: Zero persistence; request-in, questions-out.
+- **Groq Integration**: High-speed generation using `llama-3.3-70b-versatile`.
+- **Physics Mode**: Enhanced LaTeX support and conceptual depth for science content.
+- **MDX Support**: Explanations formatted in MDX for rich rendering.
+- **Dockerized**: Easy deployment with `uv` and `docker-compose`.
 
 ## Prerequisites
 
 - [Docker](https://www.docker.com/) & Docker Compose
-- Python 3.11+ (for local development)
-- API Keys for Google AI Studio and Groq
+- [Groq API Key](https://console.groq.com/)
+- Python 3.12+ (if running locally)
 
-## Quick Start
+## Getting Started
 
-1. **Clone the repository**
+### 1. Environment Setup
 
-   ```bash
-   git clone https://github.com/Sipsaraa/question_gen_engine.git
-   cd question_gen_engine
-   ```
-
-2. **Configure Environment**
-   Copy the example environment file and add your API keys:
-
-   ```bash
-   cp .env.example .env
-   # Edit .env and fill in GOOGLE_API_KEY and GROQ_API_KEY
-   ```
-
-3. **Start with Docker Compose**
-
-   ```bash
-   docker compose up --build
-   ```
-
-4. **Access the Application**
-   - **Gateway API**: [http://localhost:8000](http://localhost:8000)
-   - **API Docs**: [http://localhost:8000/docs](http://localhost:8000/docs)
-   - **Architecture Docs**: [http://localhost:8000/help](http://localhost:8000/help) (if mounted)
-
-## Documentation
-
-- **Architecture**: `docs/architecture.md`
-- **Authentication**: `docs/authentication.md`
-- **Service Guides**: `docs/services/`
-
-To run documentation locally:
+Copy the example environment file:
 
 ```bash
-pip install mkdocs-material
-mkdocs serve
+cp .env.example .env
 ```
 
-## Contributing
+Edit `.env` and provide your `GROQ_API_KEY`. You can also configure the `PRIMARY_GENERATOR` (default: `groq`).
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on how to help improve this project.
+### 2. Running with Docker
+
+Start the engine:
+
+```bash
+make up-build
+```
+
+The engine will be available at [http://localhost:8004](http://localhost:8004).
+
+### 3. API Usage
+
+#### POST `/generate`
+
+Generates structured questions from content.
+
+**Request Body:**
+
+```json
+{
+  "subject": "Physics",
+  "grade": "12",
+  "medium": "English",
+  "content": "Kinematics is the branch of mechanics...",
+  "generation_type": "physics",
+  "chapter_id": 1,
+  "chapter_name": "Unit 1"
+}
+```
+
+## Development
+
+Set up the local environment using `uv`:
+
+```bash
+make dev-setup
+```
+
+Run tests:
+
+```bash
+make test
+```
+
+Check code style:
+
+```bash
+make lint
+```
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License.

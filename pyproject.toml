@@ -1,0 +1,33 @@
+[project]
+name = "question-gen-engine"
+version = "0.1.0"
+description = "Question Generation Engine"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "sqlmodel",
+    "psycopg2-binary",
+    "python-jose[cryptography]",
+    "passlib[bcrypt]",
+    "bcrypt",
+    "google-generativeai",
+    "groq",
+    "python-multipart",
+    "requests",
+    "pypdf",
+    "python-dotenv",
+    "PyYAML",
+    "reportlab",
+    "matplotlib>=3.10.8",
+]
+
+[dependency-groups]
+dev = [
+    "flake8",
+    "pytest",
+    "pytest-asyncio",
+    "mkdocs",
+    "mkdocs-material",
+]

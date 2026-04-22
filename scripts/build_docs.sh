@@ -1,15 +1,10 @@
 #!/bin/bash
 set -e
 
-# Activate virtual environment if present
-if [ -d ".venv" ]; then
-    source .venv/bin/activate
-fi
+echo "Syncing documentation dependencies with uv..."
+uv sync
 
-# Install doc dependencies if needed
-pip install mkdocs mkdocs-material
-
-# Build the site
-mkdocs build
+echo "Building MkDocs site..."
+uv run mkdocs build
 
 echo "Documentation built successfully in 'site/' directory."
