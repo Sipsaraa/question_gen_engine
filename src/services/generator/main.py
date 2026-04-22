@@ -3,7 +3,7 @@ from fastapi.security.api_key import APIKeyHeader
 from typing import List
 import os
 
-from src.shared.models.question import SyllabusContent, GeneratedQuestion
+from src.shared.models import SyllabusContent, GeneratedQuestion
 from src.services.generator.service import GeneratorService
 
 QT_INTERNAL_API_KEY = os.getenv("QT_INTERNAL_API_KEY", "default-insecure-key")

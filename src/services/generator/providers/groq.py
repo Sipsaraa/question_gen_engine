@@ -4,16 +4,17 @@ import time
 from typing import List
 from groq import Groq
 from src.services.generator.providers.base import BaseLLMProvider
-from src.shared.models.question import SyllabusContent, GeneratedQuestion
-from src.shared.models.generation_schema import QuestionBank
-from src.shared.utils.text_utils import chunk_text
-from src.services.generator.prompts import (
+from src.shared.models import (
     SYSTEM_MESSAGE,
     BASE_PROMPT_TEMPLATE,
     PHYSICS_INSTRUCTIONS,
     GENERAL_INSTRUCTIONS,
-    COMMON_INSTRUCTIONS
+    COMMON_INSTRUCTIONS,
+    SyllabusContent,
+    GeneratedQuestion,
+    QuestionBank
 )
+from src.shared.utils.text_utils import chunk_text
 
 
 class GroqProvider(BaseLLMProvider):

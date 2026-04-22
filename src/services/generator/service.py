@@ -3,7 +3,7 @@ from src.services.generator.providers.groq import GroqProvider
 import os
 from typing import List
 from dotenv import load_dotenv
-from src.shared.models.question import SyllabusContent, GeneratedQuestion
+from src.shared.models import SyllabusContent, GeneratedQuestion
 
 # Load env vars
 load_dotenv()

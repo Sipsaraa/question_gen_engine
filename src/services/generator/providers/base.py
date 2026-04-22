@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from typing import List
-from src.shared.models.question import SyllabusContent, GeneratedQuestion
+from src.shared.models import SyllabusContent, GeneratedQuestion
 
 
 class BaseLLMProvider(ABC):
