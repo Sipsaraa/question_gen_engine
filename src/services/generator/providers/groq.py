@@ -5,14 +5,16 @@ from typing import List
 from groq import Groq
 from src.services.generator.providers.base import BaseLLMProvider
 from src.shared.models import (
+    SyllabusContent,
+    GeneratedQuestion,
+    QuestionBank
+)
+from src.shared.prompts import (
     SYSTEM_MESSAGE,
     BASE_PROMPT_TEMPLATE,
     PHYSICS_INSTRUCTIONS,
     GENERAL_INSTRUCTIONS,
-    COMMON_INSTRUCTIONS,
-    SyllabusContent,
-    GeneratedQuestion,
-    QuestionBank
+    COMMON_INSTRUCTIONS
 )
 from src.shared.utils.text_utils import chunk_text
 

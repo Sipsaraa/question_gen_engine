@@ -1,7 +1,7 @@
 services:
   qt-engine:
     build: .
-    command: uv run uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT:-8004} --reload
+    command: uv run --no-sync uvicorn src.services.generator.main:app --host 0.0.0.0 --port ${GENERATOR_PORT:-8004} --reload
     ports:
       - "${GENERATOR_PORT:-8004}:${GENERATOR_PORT:-8004}"
     environment:
@@ -15,7 +15,7 @@ services:
 
   docs:
     build: .
-    command: uv run mkdocs serve --dev-addr 0.0.0.0:8005
+    command: uv run --no-sync mkdocs serve --dev-addr 0.0.0.0:8005
     ports:
       - "8005:8005"
     volumes:
